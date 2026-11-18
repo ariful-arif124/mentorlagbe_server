@@ -2,29 +2,20 @@
 const { ObjectId } = require("mongodb");
 const { getTuitionCollection } = require("../models/tuition.model");
 
-// Escape special regex characters
 const escapeRegex = (value) => {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
 
-// Format MongoDB document
 const formatTuition = (tuition) => ({
   ...tuition,
   _id: tuition._id.toString(),
 });
 
-// GET ALL APPROVED TUITIONS
 const getAllTuitions = async (req, res) => {
   try {
     const collection = getTuitionCollection();
 
-    const {
-      search,
-      subject,
-      classLevel,
-      mode,
-      location,
-    } = req.query;
+    const { search, subject, classLevel, mode, location } = req.query;
 
     const filter = {
       approvalStatus: "approved",
@@ -32,38 +23,23 @@ const getAllTuitions = async (req, res) => {
     };
 
     if (subject && subject !== "All Subjects") {
-      filter.subject = new RegExp(
-        `^${escapeRegex(subject)}$`,
-        "i"
-      );
+      filter.subject = new RegExp(`^${escapeRegex(subject)}$`, "i");
     }
 
     if (classLevel) {
-      filter.classLevel = new RegExp(
-        `^${escapeRegex(classLevel)}$`,
-        "i"
-      );
+      filter.classLevel = new RegExp(`^${escapeRegex(classLevel)}$`, "i");
     }
 
     if (mode && mode !== "All Modes") {
-      filter.mode = new RegExp(
-        `^${escapeRegex(mode)}$`,
-        "i"
-      );
+      filter.mode = new RegExp(`^${escapeRegex(mode)}$`, "i");
     }
 
     if (location && location !== "All Locations") {
-      filter.location = new RegExp(
-        escapeRegex(location),
-        "i"
-      );
+      filter.location = new RegExp(escapeRegex(location), "i");
     }
 
     if (search) {
-      const searchRegex = new RegExp(
-        escapeRegex(search),
-        "i"
-      );
+      const searchRegex = new RegExp(escapeRegex(search), "i");
 
       filter.$or = [
         { title: searchRegex },
@@ -82,7 +58,6 @@ const getAllTuitions = async (req, res) => {
       count: tuitions.length,
       data: tuitions.map(formatTuition),
     });
-
   } catch (error) {
     console.error("Get tuitions error:", error);
 
@@ -93,7 +68,6 @@ const getAllTuitions = async (req, res) => {
   }
 };
 
-// GET FEATURED TUITIONS (LATEST 6)
 const getFeaturedTuitions = async (req, res) => {
   try {
     const collection = getTuitionCollection();
@@ -112,7 +86,6 @@ const getFeaturedTuitions = async (req, res) => {
       count: tuitions.length,
       data: tuitions.map(formatTuition),
     });
-
   } catch (error) {
     console.error("Featured tuitions error:", error);
 
@@ -123,22 +96,18 @@ const getFeaturedTuitions = async (req, res) => {
   }
 };
 
-// GET SINGLE TUITION DETAILS
 const getTuitionById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid tuition ID",
-      });
-    }
-
     const collection = getTuitionCollection();
 
+    const tuitionId = ObjectId.isValid(id)
+      ? new ObjectId(id)
+      : id;
+
     const tuition = await collection.findOne({
-      _id: new ObjectId(id),
+      _id: tuitionId,
       approvalStatus: "approved",
       isActive: true,
     });
@@ -154,7 +123,6 @@ const getTuitionById = async (req, res) => {
       success: true,
       data: formatTuition(tuition),
     });
-
   } catch (error) {
     console.error("Tuition details error:", error);
 
