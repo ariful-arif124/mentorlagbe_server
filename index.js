@@ -8,7 +8,7 @@ const { connectDB } = require("./src/config/db");
 const { ensureUserIndexes } = require("./src/models/userModel");
 
 const authRoutes = require("./src/routes/authRoutes");
-const tuitionRoutes = require("./src/routes/tuition.routes");
+const tutorRoutes = require("./src/routes/tutorRoutes");
 
 const app = express();
 
@@ -33,7 +33,7 @@ app.get("/api/health", (req, res) => {
 
 // API Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/tuitions", tuitionRoutes);
+app.use("/api/tutor", tutorRoutes);
 
 // Server Configuration
 const PORT = process.env.PORT || 5000;
