@@ -1,6 +1,8 @@
+
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+
 const {
   createUser,
   findUserByEmail,
@@ -19,6 +21,18 @@ router.post("/register", async (req, res) => {
       });
     }
 
+    if (
+      typeof name !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      typeof role !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid input format",
+      });
+    }
+
     const normalizedName = name.trim();
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedRole = role.trim().toLowerCase();
@@ -30,7 +44,9 @@ router.post("/register", async (req, res) => {
       });
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailRegex.test(normalizedEmail)) {
       return res.status(400).json({
         success: false,
         message: "Please provide a valid email address",
@@ -67,13 +83,15 @@ router.post("/register", async (req, res) => {
       email: normalizedEmail,
       passwordHash,
       role: normalizedRole,
+      plan: "free",
+      isActive: true,
     });
 
     return res.status(201).json({
       success: true,
       message: "Registration successful",
       data: {
-        userId: result.insertedId,
+        userId: result.insertedId.toString(),
         name: normalizedName,
         email: normalizedEmail,
         role: normalizedRole,
@@ -81,7 +99,7 @@ router.post("/register", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Registration error:", error.message);
+    console.error("Registration error:", error);
 
     if (error.code === 11000) {
       return res.status(409).json({
@@ -108,6 +126,16 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid input format",
+      });
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
 
     const user = await findUserByEmail(normalizedEmail);
@@ -128,6 +156,15 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Invalid email or password",
+      });
+    }
+
+    if (user.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        code: "ACCOUNT_DEACTIVATED",
+        message:
+          "Your account has been deactivated. Please contact the administrator.",
       });
     }
 
@@ -153,16 +190,16 @@ router.post("/login", async (req, res) => {
       data: {
         token,
         user: {
-          userId: user._id,
+          userId: user._id.toString(),
           name: user.name,
           email: user.email,
           role: user.role,
-          plan: user.plan,
+          plan: user.plan || "free",
         },
       },
     });
   } catch (error) {
-    console.error("Login error:", error.message);
+    console.error("Login error:", error);
 
     return res.status(500).json({
       success: false,
