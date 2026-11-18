@@ -9,6 +9,8 @@ const { ensureUserIndexes } = require("./src/models/userModel");
 
 const authRoutes = require("./src/routes/authRoutes");
 const tutorRoutes = require("./src/routes/tutorRoutes");
+const tuitionRoutes = require("./src/routes/tuition.routes");
+const adminRoutes = require("./src/routes/adminRoutes");
 
 const app = express();
 
@@ -34,6 +36,8 @@ app.get("/api/health", (req, res) => {
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/tutor", tutorRoutes);
+app.use("/api/tuitions", tuitionRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Server Configuration
 const PORT = process.env.PORT || 5000;

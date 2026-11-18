@@ -1,3 +1,4 @@
+
 const jwt = require("jsonwebtoken");
 
 function verifyToken(req, res, next) {
@@ -42,7 +43,19 @@ function verifyTutor(req, res, next) {
   next();
 }
 
+function verifyAdmin(req, res, next) {
+  if (!req.user || req.user.role !== "admin") {
+    return res.status(403).json({
+      success: false,
+      message: "Admin access required",
+    });
+  }
+
+  next();
+}
+
 module.exports = {
   verifyToken,
   verifyTutor,
+  verifyAdmin,
 };
