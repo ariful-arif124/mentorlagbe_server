@@ -1,6 +1,10 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
-const { createUser, findUserByEmail } = require("../models/userModel");
+const jwt = require("jsonwebtoken");
+const {
+  createUser,
+  findUserByEmail,
+} = require("../models/userModel");
 
 const router = express.Router();
 
@@ -73,6 +77,7 @@ router.post("/register", async (req, res) => {
         name: normalizedName,
         email: normalizedEmail,
         role: normalizedRole,
+        plan: "free",
       },
     });
   } catch (error) {
@@ -88,6 +93,80 @@ router.post("/register", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Registration failed",
+    });
+  }
+});
+
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await findUserByEmail(normalizedEmail);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    const passwordMatches = await bcrypt.compare(
+      password,
+      user.passwordHash
+    );
+
+    if (!passwordMatches) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is missing in .env");
+    }
+
+    const token = jwt.sign(
+      {
+        userId: user._id.toString(),
+        email: user.email,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      data: {
+        token,
+        user: {
+          userId: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          plan: user.plan,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error.message);
+
+    return res.status(500).json({
+      success: false,
+      message: "Login failed",
     });
   }
 });
