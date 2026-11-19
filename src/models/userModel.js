@@ -17,7 +17,11 @@ async function createUser(userData) {
     email: userData.email.trim().toLowerCase(),
     passwordHash: userData.passwordHash,
     role: userData.role,
-    plan: "free",
+    plan: userData.plan || "free",
+
+    // New accounts are active by default
+    isActive: true,
+
     createdAt: new Date(),
     updatedAt: new Date(),
   };

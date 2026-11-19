@@ -11,6 +11,7 @@ const authRoutes = require("./src/routes/authRoutes");
 const tutorRoutes = require("./src/routes/tutorRoutes");
 const tuitionRoutes = require("./src/routes/tuition.routes");
 const adminRoutes = require("./src/routes/adminRoutes");
+const applicationRoutes = require("./src/routes/applicationRoutes");
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tutor", tutorRoutes);
 app.use("/api/tuitions", tuitionRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/applications", applicationRoutes);
 
 // Server Configuration
 const PORT = process.env.PORT || 5000;
