@@ -41,6 +41,11 @@ const formatAdminTuition = (tuition) => ({
   isActive: tuition.isActive === true,
 });
 
+const formatAdminApplication = (application) => ({
+  ...application,
+  _id: application._id.toString(),
+});
+
 // ============================================
 // ADMIN DASHBOARD STATISTICS
 // GET /api/admin/stats
@@ -768,5 +773,232 @@ router.patch("/tuitions/:id/status", async (req, res) => {
     });
   }
 });
+
+
+// ============================================
+// ADMIN APPLICATION MANAGEMENT
+// GET /api/admin/applications
+// ============================================
+
+router.get("/applications", async (req, res) => {
+  try {
+    const collection = getDB().collection("applications");
+
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search.trim()
+        : "";
+
+    const status =
+      typeof req.query.status === "string"
+        ? req.query.status.trim().toLowerCase()
+        : "all";
+
+    const page = Math.max(
+      1,
+      parseInt(req.query.page, 10) || 1
+    );
+
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(req.query.limit, 10) || 10)
+    );
+
+    const validStatuses = [
+      "all",
+      "pending",
+      "accepted",
+      "rejected",
+      "cancelled",
+    ];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid application status filter",
+      });
+    }
+
+    if (search.length > 120) {
+      return res.status(400).json({
+        success: false,
+        message: "Search query is too long",
+      });
+    }
+
+    const conditions = [];
+
+    // Status filtering
+    if (status === "pending") {
+      conditions.push({
+        $or: [
+          { status: "pending" },
+          { status: null },
+        ],
+      });
+    } else if (status !== "all") {
+      conditions.push({ status });
+    }
+
+    // Search filtering
+    if (search) {
+      const regex = new RegExp(
+        escapeRegex(search),
+        "i"
+      );
+
+      conditions.push({
+        $or: [
+          { studentName: regex },
+          { studentEmail: regex },
+          { studentPhone: regex },
+          { tutorName: regex },
+          { tutorEmail: regex },
+          { tuitionTitle: regex },
+          { subject: regex },
+          { tuitionId: regex },
+        ],
+      });
+    }
+
+    const filter =
+      conditions.length > 0
+        ? { $and: conditions }
+        : {};
+
+    const skip = (page - 1) * limit;
+
+    // Application statistics
+    const [
+      applications,
+      totalApplications,
+      total,
+      pending,
+      accepted,
+      rejected,
+      cancelled,
+    ] = await Promise.all([
+      collection
+        .find(filter)
+        .sort({ appliedAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .toArray(),
+
+      collection.countDocuments(filter),
+
+      collection.countDocuments({}),
+
+      collection.countDocuments({
+        $or: [
+          { status: "pending" },
+          { status: null },
+        ],
+      }),
+
+      collection.countDocuments({
+        status: "accepted",
+      }),
+
+      collection.countDocuments({
+        status: "rejected",
+      }),
+
+      collection.countDocuments({
+        status: "cancelled",
+      }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin applications retrieved successfully",
+
+      data: {
+        applications: applications.map(
+          formatAdminApplication
+        ),
+
+        stats: {
+          total,
+          pending,
+          accepted,
+          rejected,
+          cancelled,
+        },
+
+        pagination: {
+          currentPage: page,
+          limit,
+          totalApplications,
+          totalPages: Math.ceil(
+            totalApplications / limit
+          ),
+        },
+      },
+    });
+
+  } catch (error) {
+    console.error(
+      "Admin applications error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve applications",
+    });
+  }
+});
+
+
+// ============================================
+// ADMIN APPLICATION DETAILS
+// GET /api/admin/applications/:id
+// ============================================
+
+router.get("/applications/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid application ID",
+      });
+    }
+
+    const collection = getDB().collection("applications");
+
+    const application = await collection.findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Application details retrieved successfully",
+
+      data: formatAdminApplication(application),
+    });
+
+  } catch (error) {
+    console.error(
+      "Admin application details error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve application details",
+    });
+  }
+});
+
 
 module.exports = router;
