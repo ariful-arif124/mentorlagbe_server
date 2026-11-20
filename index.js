@@ -13,6 +13,8 @@ const tuitionRoutes = require("./src/routes/tuition.routes");
 const adminRoutes = require("./src/routes/adminRoutes");
 const applicationRoutes = require("./src/routes/applicationRoutes");
 const googleAuthRoutes = require("./src/routes/googleAuthRoutes");
+const profileRoutes = require("./src/routes/profileRoutes");
+const uploadRoutes = require("./src/routes/uploadRoutes");
 
 const app = express();
 
@@ -42,6 +44,8 @@ app.use("/api/tuitions", tuitionRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/auth/google", googleAuthRoutes);
+app.use("/api/profile", profileRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // Server Configuration
 const PORT = process.env.PORT || 5000;

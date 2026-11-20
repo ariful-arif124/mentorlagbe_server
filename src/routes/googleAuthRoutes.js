@@ -149,14 +149,6 @@ router.post("/", async (req, res) => {
       });
     }
 
-    // 4. Admin accounts use existing authentication.
-
-    if (user.role === "admin") {
-      return res.status(403).json({
-        success: false,
-        message: "Admin accounts must use standard sign-in",
-      });
-    }
 
     // 5. Check account status.
 
