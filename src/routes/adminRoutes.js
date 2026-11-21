@@ -1,8 +1,8 @@
 
 const express = require("express");
 const { ObjectId } = require("mongodb");
-
 const { getDB } = require("../config/db");
+
 
 const {
   verifyToken,
@@ -14,8 +14,8 @@ const router = express.Router();
 router.use(verifyToken, verifyAdmin);
 
 const getUsersCollection = () => getDB().collection("users");
-
 const getTuitionsCollection = () => getDB().collection("tuitions");
+const getPaymentsCollection = () => getDB().collection("payments");
 
 const escapeRegex = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -46,10 +46,6 @@ const formatAdminApplication = (application) => ({
   _id: application._id.toString(),
 });
 
-// ============================================
-// ADMIN DASHBOARD STATISTICS
-// GET /api/admin/stats
-// ============================================
 
 router.get("/stats", async (req, res) => {
   try {
@@ -130,11 +126,6 @@ router.get("/stats", async (req, res) => {
     });
   }
 });
-
-// ============================================
-// USER MANAGEMENT
-// GET /api/admin/users
-// ============================================
 
 router.get("/users", async (req, res) => {
   try {
@@ -246,11 +237,6 @@ router.get("/users", async (req, res) => {
   }
 });
 
-// ============================================
-// GET INDIVIDUAL USER
-// GET /api/admin/users/:id
-// ============================================
-
 router.get("/users/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -287,11 +273,6 @@ router.get("/users/:id", async (req, res) => {
     });
   }
 });
-
-// ============================================
-// ACTIVATE / DEACTIVATE USER
-// PATCH /api/admin/users/:id/status
-// ============================================
 
 router.patch("/users/:id/status", async (req, res) => {
   try {
@@ -395,11 +376,6 @@ router.patch("/users/:id/status", async (req, res) => {
   }
 });
 
-// ============================================
-// TUITION MANAGEMENT
-// GET /api/admin/tuitions
-// ============================================
-
 router.get("/tuitions", async (req, res) => {
   try {
     const collection = getTuitionsCollection();
@@ -462,19 +438,13 @@ router.get("/tuitions", async (req, res) => {
         ],
       });
     } else if (approvalStatus !== "all") {
-      conditions.push({
-        approvalStatus,
-      });
+      conditions.push({ approvalStatus });
     }
 
     if (status === "active") {
-      conditions.push({
-        isActive: true,
-      });
+      conditions.push({ isActive: true });
     } else if (status === "inactive") {
-      conditions.push({
-        isActive: { $ne: true },
-      });
+      conditions.push({ isActive: { $ne: true } });
     }
 
     if (subject) {
@@ -545,11 +515,6 @@ router.get("/tuitions", async (req, res) => {
   }
 });
 
-// ============================================
-// GET INDIVIDUAL TUITION
-// GET /api/admin/tuitions/:id
-// ============================================
-
 router.get("/tuitions/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -586,11 +551,6 @@ router.get("/tuitions/:id", async (req, res) => {
     });
   }
 });
-
-// ============================================
-// APPROVE / REJECT TUITION
-// PATCH /api/admin/tuitions/:id/approval
-// ============================================
 
 router.patch("/tuitions/:id/approval", async (req, res) => {
   try {
@@ -633,7 +593,8 @@ router.patch("/tuitions/:id/approval", async (req, res) => {
       tuition.approvalStatus || "pending";
 
     const shouldDeactivate =
-      approvalStatus === "rejected" && tuition.isActive === true;
+      approvalStatus === "rejected" &&
+      tuition.isActive === true;
 
     if (
       currentApprovalStatus === approvalStatus &&
@@ -687,11 +648,6 @@ router.patch("/tuitions/:id/approval", async (req, res) => {
     });
   }
 });
-
-// ============================================
-// ACTIVATE / DEACTIVATE TUITION
-// PATCH /api/admin/tuitions/:id/status
-// ============================================
 
 router.patch("/tuitions/:id/status", async (req, res) => {
   try {
@@ -774,12 +730,6 @@ router.patch("/tuitions/:id/status", async (req, res) => {
   }
 });
 
-
-// ============================================
-// ADMIN APPLICATION MANAGEMENT
-// GET /api/admin/applications
-// ============================================
-
 router.get("/applications", async (req, res) => {
   try {
     const collection = getDB().collection("applications");
@@ -828,7 +778,6 @@ router.get("/applications", async (req, res) => {
 
     const conditions = [];
 
-    // Status filtering
     if (status === "pending") {
       conditions.push({
         $or: [
@@ -840,7 +789,6 @@ router.get("/applications", async (req, res) => {
       conditions.push({ status });
     }
 
-    // Search filtering
     if (search) {
       const regex = new RegExp(
         escapeRegex(search),
@@ -868,7 +816,6 @@ router.get("/applications", async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    // Application statistics
     const [
       applications,
       totalApplications,
@@ -912,12 +859,10 @@ router.get("/applications", async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Admin applications retrieved successfully",
-
       data: {
         applications: applications.map(
           formatAdminApplication
         ),
-
         stats: {
           total,
           pending,
@@ -925,7 +870,6 @@ router.get("/applications", async (req, res) => {
           rejected,
           cancelled,
         },
-
         pagination: {
           currentPage: page,
           limit,
@@ -936,12 +880,8 @@ router.get("/applications", async (req, res) => {
         },
       },
     });
-
   } catch (error) {
-    console.error(
-      "Admin applications error:",
-      error
-    );
+    console.error("Admin applications error:", error);
 
     return res.status(500).json({
       success: false,
@@ -949,12 +889,6 @@ router.get("/applications", async (req, res) => {
     });
   }
 });
-
-
-// ============================================
-// ADMIN APPLICATION DETAILS
-// GET /api/admin/applications/:id
-// ============================================
 
 router.get("/applications/:id", async (req, res) => {
   try {
@@ -983,21 +917,862 @@ router.get("/applications/:id", async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Application details retrieved successfully",
-
       data: formatAdminApplication(application),
     });
-
   } catch (error) {
-    console.error(
-      "Admin application details error:",
-      error
-    );
+    console.error("Admin application details error:", error);
 
     return res.status(500).json({
       success: false,
       message: "Failed to retrieve application details",
     });
   }
+});
+
+router.get("/payments/:id", async (req, res) => {
+  try {
+    const collection = getPaymentsCollection();
+
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search.trim()
+        : "";
+
+    const role =
+      typeof req.query.role === "string"
+        ? req.query.role.trim().toLowerCase()
+        : "all";
+
+    const status =
+      typeof req.query.status === "string"
+        ? req.query.status.trim().toLowerCase()
+        : "all";
+
+    const sortOrder =
+      typeof req.query.sort === "string"
+        ? req.query.sort.toLowerCase()
+        : "newest";
+
+    const page = Math.max(
+      1,
+      parseInt(req.query.page, 10) || 1
+    );
+
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(req.query.limit, 10) || 10)
+    );
+
+    if (search.length > 120) {
+      return res.status(400).json({
+        success: false,
+        message: "Search query is too long",
+      });
+    }
+
+    if (!["all", "student", "tutor"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment role filter",
+      });
+    }
+
+    const allowedStatuses = [
+      "all",
+      "paid",
+      "pending",
+      "failed",
+      "expired",
+      "refunded",
+      "partially_refunded",
+    ];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment status filter",
+      });
+    }
+
+    if (!["newest", "oldest"].includes(sortOrder)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment sort order",
+      });
+    }
+
+    const conditions = [];
+
+    if (role !== "all") {
+      conditions.push({ role });
+    }
+
+    if (status === "partially_refunded") {
+      conditions.push({
+        $or: [
+          { status: "partially_refunded" },
+          { refundStatus: "partial" },
+        ],
+      });
+    } else if (status !== "all") {
+      conditions.push({ status });
+    }
+
+    if (search) {
+      const regex = new RegExp(
+        escapeRegex(search),
+        "i"
+      );
+
+      const searchConditions = [
+        { "user.name": regex },
+        { "user.email": regex },
+        { userName: regex },
+        { userEmail: regex },
+        { checkoutSessionId: regex },
+        { paymentIntentId: regex },
+      ];
+
+      if (ObjectId.isValid(search)) {
+        searchConditions.push(
+          { _id: new ObjectId(search) },
+          { userId: new ObjectId(search) }
+        );
+      }
+
+      conditions.push({
+        $or: searchConditions,
+      });
+    }
+
+    const match =
+      conditions.length > 0
+        ? { $and: conditions }
+        : {};
+
+    const basePipeline = [
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $unwind: {
+          path: "$user",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $match: match,
+      },
+    ];
+
+    const skip = (page - 1) * limit;
+
+    const [
+      payments,
+      countResult,
+      statsResult,
+    ] = await Promise.all([
+      collection.aggregate([
+        ...basePipeline,
+        {
+          $sort:
+            sortOrder === "oldest"
+              ? { createdAt: 1, _id: 1 }
+              : { createdAt: -1, _id: -1 },
+        },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: 1,
+            userId: 1,
+            userName: {
+              $ifNull: [
+                "$user.name",
+                { $ifNull: ["$userName", "Unknown User"] },
+              ],
+            },
+            userEmail: {
+              $ifNull: [
+                "$userEmail",
+                { $ifNull: ["$user.email", ""] },
+              ],
+            },
+            role: {
+              $ifNull: ["$role", "$user.role"],
+            },
+            plan: 1,
+            amount: 1,
+            currency: 1,
+            provider: 1,
+            status: 1,
+            checkoutSessionId: 1,
+            paymentIntentId: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            paidAt: 1,
+            refundId: 1,
+            refundStatus: 1,
+            refundAmount: 1,
+            refundedAt: 1,
+            stripeEventId: 1,
+          },
+        },
+      ]).toArray(),
+
+      collection.aggregate([
+        ...basePipeline,
+        { $count: "totalPayments" },
+      ]).toArray(),
+
+      collection.aggregate([
+        {
+          $group: {
+            _id: null,
+
+            totalTransactions: {
+              $sum: 1,
+            },
+
+            paidPayments: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$status", "paid"] },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            pendingPayments: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$status", "pending"] },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            failedPayments: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$status", "failed"] },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            expiredPayments: {
+              $sum: {
+                $cond: [
+                  { $eq: ["$status", "expired"] },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            refundedPayments: {
+              $sum: {
+                $cond: [
+                  {
+                    $or: [
+                      { $eq: ["$status", "refunded"] },
+                      { $eq: ["$status", "partially_refunded"] },
+                      { $eq: ["$refundStatus", "partial"] },
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+
+            grossRevenue: {
+              $sum: {
+                $cond: [
+                  {
+                    $in: [
+                      "$status",
+                      ["paid", "refunded", "partially_refunded"],
+                    ],
+                  },
+                  { $ifNull: ["$amount", 0] },
+                  0,
+                ],
+              },
+            },
+
+            refundedAmount: {
+              $sum: {
+                $ifNull: [
+                  "$refundAmount",
+                  {
+                    $cond: [
+                      { $eq: ["$status", "refunded"] },
+                      { $ifNull: ["$amount", 0] },
+                      0,
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ]).toArray(),
+    ]);
+
+    const totalPayments =
+      countResult[0]?.totalPayments || 0;
+
+    const summary = statsResult[0] || {};
+
+    const grossRevenue = summary.grossRevenue || 0;
+    const refundedAmount = summary.refundedAmount || 0;
+
+    const formattedPayments = payments.map((payment) => {
+      const {
+        _id,
+        userId,
+        ...rest
+      } = payment;
+
+      return {
+        paymentId: _id.toString(),
+        userId: userId?.toString() || "",
+        ...rest,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin payments retrieved successfully",
+      data: {
+        payments: formattedPayments,
+        stats: {
+          totalTransactions:
+            summary.totalTransactions || 0,
+          paidPayments:
+            summary.paidPayments || 0,
+          pendingPayments:
+            summary.pendingPayments || 0,
+          failedPayments:
+            summary.failedPayments || 0,
+          expiredPayments:
+            summary.expiredPayments || 0,
+          refundedPayments:
+            summary.refundedPayments || 0,
+          grossRevenue,
+          refundedAmount,
+          netRevenue: Math.max(
+            0,
+            grossRevenue - refundedAmount
+          ),
+        },
+        pagination: {
+          currentPage: page,
+          limit,
+          totalPayments,
+          totalPages: Math.ceil(totalPayments / limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Admin payments error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve payment records",
+    });
+  }
+});
+
+router.get("/payments/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment ID",
+      });
+    }
+
+    const payment = await getPaymentsCollection().findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment record not found",
+      });
+    }
+
+    const user = payment.userId
+      ? await getUsersCollection().findOne({
+          _id: payment.userId,
+        })
+      : null;
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment details retrieved successfully",
+      data: formatAdminPayment(payment, user || {}),
+    });
+  } catch (error) {
+    console.error("Admin payment details error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve payment details",
+    });
+  }
+});
+
+
+const formatAdminPayment = (payment, user = null) => ({
+    paymentId: payment._id.toString(),
+    userId: payment.userId?.toString() || null,
+    userName: user?.name || payment.userName || "Unknown User",
+    userEmail: user?.email || payment.userEmail || null,
+    role: payment.role,
+    plan: payment.plan,
+    amount: payment.amount,
+    currency: (payment.currency || "usd").toUpperCase(),
+    provider: payment.provider || "stripe",
+    status: payment.status,
+    checkoutSessionId: payment.checkoutSessionId || null,
+    paymentIntentId: payment.paymentIntentId || null,
+    stripeEventId: payment.stripeEventId || null,
+    createdAt: payment.createdAt || null,
+    updatedAt: payment.updatedAt || null,
+    paidAt: payment.paidAt || null,
+    refundStatus: payment.refundStatus || null,
+    refundedAt: payment.refundedAt || null,
+});
+
+router.get("/payments/stats", async (req, res) => {
+    try {
+        const payments = getPaymentsCollection();
+
+        const [
+            totalTransactions,
+            successfulTransactions,
+            pendingTransactions,
+            failedTransactions,
+            expiredTransactions,
+            studentTransactions,
+            tutorTransactions,
+            revenueResult,
+        ] = await Promise.all([
+            payments.countDocuments({}),
+            payments.countDocuments({ status: "paid" }),
+            payments.countDocuments({ status: "pending" }),
+            payments.countDocuments({ status: "failed" }),
+            payments.countDocuments({ status: "expired" }),
+            payments.countDocuments({ role: "student" }),
+            payments.countDocuments({ role: "tutor" }),
+            payments.aggregate([
+                {
+                    $match: {
+                        status: "paid",
+                    },
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalRevenueCents: {
+                            $sum: "$amount",
+                        },
+                    },
+                },
+            ]).toArray(),
+        ]);
+
+        const totalRevenueCents =
+            revenueResult[0]?.totalRevenueCents || 0;
+
+        return res.status(200).json({
+            success: true,
+            message: "Payment statistics retrieved successfully",
+            data: {
+                totalTransactions,
+                successfulTransactions,
+                pendingTransactions,
+                failedTransactions,
+                expiredTransactions,
+                studentTransactions,
+                tutorTransactions,
+                totalRevenue: totalRevenueCents / 100,
+                totalRevenueCents,
+                currency: "USD",
+            },
+        });
+    } catch (error) {
+        console.error("Admin payment statistics error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to retrieve payment statistics",
+        });
+    }
+});
+
+router.get("/payments", async (req, res) => {
+    try {
+        const search =
+            typeof req.query.search === "string"
+                ? req.query.search.trim()
+                : "";
+
+        const status =
+            typeof req.query.status === "string"
+                ? req.query.status.trim().toLowerCase()
+                : "all";
+
+        const role =
+            typeof req.query.role === "string"
+                ? req.query.role.trim().toLowerCase()
+                : "all";
+
+        const method =
+            typeof req.query.method === "string"
+                ? req.query.method.trim().toLowerCase()
+                : "all";
+
+        const dateFromValue =
+            typeof req.query.dateFrom === "string"
+                ? req.query.dateFrom.trim()
+                : "";
+
+        const dateToValue =
+            typeof req.query.dateTo === "string"
+                ? req.query.dateTo.trim()
+                : "";
+
+        const sortBy =
+            typeof req.query.sortBy === "string"
+                ? req.query.sortBy
+                : "createdAt";
+
+        const sortOrder =
+            typeof req.query.sortOrder === "string"
+                ? req.query.sortOrder.toLowerCase()
+                : "desc";
+
+        const page = Math.max(
+            1,
+            parseInt(req.query.page, 10) || 1
+        );
+
+        const limit = Math.min(
+            100,
+            Math.max(1, parseInt(req.query.limit, 10) || 10)
+        );
+
+        if (search.length > 120) {
+            return res.status(400).json({
+                success: false,
+                message: "Search query is too long",
+            });
+        }
+
+        if (
+            !["all", "pending", "paid", "failed", "expired"].includes(status)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid payment status filter",
+            });
+        }
+
+        if (!["all", "student", "tutor"].includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid payment role filter",
+            });
+        }
+
+        if (!["all", "stripe"].includes(method)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid payment method filter",
+            });
+        }
+
+        if (!["createdAt", "paidAt", "amount", "status", "userName"].includes(sortBy)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid payment sorting field",
+            });
+        }
+
+        if (!["asc", "desc"].includes(sortOrder)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid sorting order",
+            });
+        }
+
+        const dateFrom = dateFromValue
+            ? new Date(dateFromValue)
+            : null;
+
+        const dateTo = dateToValue
+            ? /^\d{4}-\d{2}-\d{2}$/.test(dateToValue)
+                ? new Date(`${dateToValue}T23:59:59.999Z`)
+                : new Date(dateToValue)
+            : null;
+
+        if (
+            (dateFrom && Number.isNaN(dateFrom.getTime())) ||
+            (dateTo && Number.isNaN(dateTo.getTime()))
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid payment date filter",
+            });
+        }
+
+        if (dateFrom && dateTo && dateFrom > dateTo) {
+            return res.status(400).json({
+                success: false,
+                message: "Start date cannot be after end date",
+            });
+        }
+
+        const filter = {};
+
+        if (status !== "all") {
+            filter.status = status;
+        }
+
+        if (role !== "all") {
+            filter.role = role;
+        }
+
+        if (method !== "all") {
+            filter.provider = method;
+        }
+
+        if (dateFrom || dateTo) {
+            filter.createdAt = {};
+
+            if (dateFrom) {
+                filter.createdAt.$gte = dateFrom;
+            }
+
+            if (dateTo) {
+                filter.createdAt.$lte = dateTo;
+            }
+        }
+
+        const pipeline = [
+            {
+                $match: filter,
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "userId",
+                    foreignField: "_id",
+                    as: "paymentUser",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$paymentUser",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $addFields: {
+                    paymentId: {
+                        $toString: "$_id",
+                    },
+                    userIdText: {
+                        $toString: "$userId",
+                    },
+                    userName: {
+                        $ifNull: ["$paymentUser.name", ""],
+                    },
+                    userEmail: {
+                        $ifNull: [
+                            "$paymentUser.email",
+                            {
+                                $ifNull: ["$userEmail", ""],
+                            },
+                        ],
+                    },
+                },
+            },
+        ];
+
+        if (search) {
+            const searchRegex = new RegExp(
+                escapeRegex(search),
+                "i"
+            );
+
+            pipeline.push({
+                $match: {
+                    $or: [
+                        { paymentId: searchRegex },
+                        { userIdText: searchRegex },
+                        { userName: searchRegex },
+                        { userEmail: searchRegex },
+                        { checkoutSessionId: searchRegex },
+                        { paymentIntentId: searchRegex },
+                    ],
+                },
+            });
+        }
+
+        const skip = (page - 1) * limit;
+
+        const sortDirection = sortOrder === "asc" ? 1 : -1;
+
+        pipeline.push({
+            $facet: {
+                payments: [
+                    {
+                        $sort: {
+                            [sortBy]: sortDirection,
+                            _id: sortDirection,
+                        },
+                    },
+                    {
+                        $skip: skip,
+                    },
+                    {
+                        $limit: limit,
+                    },
+                    {
+                        $project: {
+                            _id: 1,
+                            paymentId: 1,
+                            userId: 1,
+                            userName: 1,
+                            userEmail: 1,
+                            role: 1,
+                            plan: 1,
+                            amount: 1,
+                            currency: 1,
+                            provider: 1,
+                            status: 1,
+                            checkoutSessionId: 1,
+                            paymentIntentId: 1,
+                            stripeEventId: 1,
+                            createdAt: 1,
+                            updatedAt: 1,
+                            paidAt: 1,
+                            refundStatus: 1,
+                            refundedAt: 1,
+                        },
+                    },
+                ],
+                metadata: [
+                    {
+                        $count: "totalPayments",
+                    },
+                ],
+            },
+        });
+
+        const result = await getPaymentsCollection()
+            .aggregate(pipeline)
+            .toArray();
+
+        const paymentData = result[0];
+
+        const paymentList = paymentData?.payments || [];
+
+        const totalPayments =
+            paymentData?.metadata[0]?.totalPayments || 0;
+
+        return res.status(200).json({
+            success: true,
+            message: "Payment transactions retrieved successfully",
+            data: {
+                payments: paymentList.map((payment) =>
+                    formatAdminPayment(payment)
+                ),
+                pagination: {
+                    currentPage: page,
+                    limit,
+                    totalPayments,
+                    totalPages: Math.ceil(totalPayments / limit),
+                },
+            },
+        });
+    } catch (error) {
+        console.error("Admin payment list error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to retrieve payment transactions",
+        });
+    }
+});
+
+router.get("/payments/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!ObjectId.isValid(id)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid payment ID",
+            });
+        }
+
+        const payment = await getPaymentsCollection().findOne({
+            _id: new ObjectId(id),
+        });
+
+        if (!payment) {
+            return res.status(404).json({
+                success: false,
+                message: "Payment transaction not found",
+            });
+        }
+
+        const user = payment.userId
+            ? await getUsersCollection().findOne(
+                {
+                    _id: payment.userId,
+                },
+                {
+                    projection: {
+                        name: 1,
+                        email: 1,
+                        role: 1,
+                    },
+                }
+            )
+            : null;
+
+        return res.status(200).json({
+            success: true,
+            message: "Payment details retrieved successfully",
+            data: formatAdminPayment(payment, user),
+        });
+    } catch (error) {
+        console.error("Admin payment details error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to retrieve payment details",
+        });
+    }
 });
 
 
