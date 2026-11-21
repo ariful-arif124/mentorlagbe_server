@@ -8,6 +8,7 @@ const { connectDB } = require("./src/config/db");
 const { ensureUserIndexes } = require("./src/models/userModel");
 const { ensurePaymentIndexes } = require("./src/models/paymentModel");
 
+const adminSettingsRoutes = require("./src/routes/adminSettingsRoutes");
 const authRoutes = require("./src/routes/authRoutes");
 const tutorRoutes = require("./src/routes/tutorRoutes");
 const tuitionRoutes = require("./src/routes/tuition.routes");
@@ -45,7 +46,10 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/tutor", tutorRoutes);
 app.use("/api/tuitions", tuitionRoutes);
+
+app.use("/api/admin/settings", adminSettingsRoutes);
 app.use("/api/admin", adminRoutes);
+
 app.use("/api/applications", applicationRoutes);
 app.use("/api/auth/google", googleAuthRoutes);
 app.use("/api/profile", profileRoutes);
